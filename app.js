@@ -29,7 +29,8 @@ mongoose.connect("mongodb://0.0.0.0:27017/userDB")
 const userSchema = new mongoose.Schema({
     email: String,
     password: String,
-    googleId: String
+    googleId: String,
+    secret: String
 })
 
 userSchema.plugin(passportLocalMongoose)
@@ -87,11 +88,16 @@ app.get("/register", function(req, res) {
     res.render("register")
 })
 
-app.get("/secrets", function(req, res) {
-    if(req.isAuthenticated()){
-        res.render("secrets")
-    } else {
-        res.redirect("/login")
+app.get("/secrets", async function(req, res) {
+    // if(req.isAuthenticated()){
+    //     res.render("secrets")
+    // } else {
+    //     res.redirect("/login")
+    // }
+
+    const foundUsers = await User.find({"secret":{$ne: null}})
+    if(foundUsers){
+        res.render("secrets", {usersWithSecrets: foundUsers})
     }
 })
 
@@ -100,6 +106,13 @@ app.get("/logout", function(req, res) {
         if (err) { return next(err); }
         res.redirect('/');
     });
+})
+app.get("/submit", function(req, res){
+    if(req.isAuthenticated()){
+        res.render("submit")
+    } else {
+        res.redirect("/login")
+    }
 })
 
 app.post("/register", function(req, res) {
@@ -132,6 +145,16 @@ app.post("/login",function(req, res) {
         }
     })
 
+})
+
+app.post("/submit", async function(req, res) {
+    const submittedSecret = req.body.secret;
+    const foundUser = await User.findById(req.user.id)
+    if(foundUser) {
+        foundUser.secret = submittedSecret
+        foundUser.save()
+        res.redirect("/secrets")
+    }
 })
 
 
